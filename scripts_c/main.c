@@ -3,16 +3,24 @@
 #include <string.h>
 #include "sqlite/sqlite3.h"
 
+char c;
+#define BUFFER_CLEANER(c)\
+    while((c = getchar()) != '\n' && c != EOF)
+
+#define BUFFER_MAX 60
+
 typedef struct{
-    int numero;
+    long long int numero;
     int apariciones;
 } Aparicion_num;
 
-int Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
-int Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
-int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
+double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
+double Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
+long long int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
 
-void algoritmo(int*numeros,int longitud);
+void Quick_Sort(long long int*numeros,int inicio,int final);
+int Particion(long long int*numeros,int inicio,int final);
+
 
 int main(){
     //conectando la base de datos
@@ -27,113 +35,210 @@ int main(){
     
     //obteniendo la consulta
     sqlite3_stmt *stmt;
-    char *consulta = (char*)malloc((strlen("SELECT ") + 1)*sizeof(char));
-    consulta = "SELECT ";
-
+    char *consulta = calloc(BUFFER_MAX,sizeof(char));
     //obteniendo el nombre de la columna
-    char *dato = (char*)calloc(25,sizeof(char));
-    printf("escribe el nombre de la columna:");
-    fgets(dato,25,stdin);
-    dato[strcspn(dato,"\n")] = '\0';
-
-    //uniendo a la consulta la columna
-    consulta = (char*)realloc(consulta,(strlen(consulta) + strlen(dato) + 1) * sizeof(char));
-    strcat(consulta,dato);
-    char *temp = " FROM Houses";
-    consulta = (char*)realloc(consulta,(strlen(consulta) + strlen(temp) + 1) * sizeof(char));
-    consulta[strlen(consulta)] = '\0';
+    printf("ESCRIBE LA CONSULTA COMPLETA:");
+    fgets(consulta,BUFFER_MAX,stdin);
+    if ((int)strcspn(consulta,"\n") == (int)strlen(consulta)){
+        BUFFER_CLEANER(c);
+        consulta[strcspn(consulta,"\n")] = '\0';
+    }else{
+        consulta[strcspn(consulta,"\n")] = '\0';
+    }
 
     //FUCIONES
+    double resultado_Media;
+    double resultado_Mediana;
+    long long int resultado_Moda;
+    if ((resultado_Media = Media(db,stmt,consulta)) == -1){
+        return 0;
+    }
+    if((resultado_Mediana = Mediana(db,stmt,consulta)) == -1){
+        return 0;
+    }
+    if((resultado_Moda = Moda(db,stmt,consulta)) == -1){
+        return 0;
+    }
 
+    printf("La media es de %.4lf\n",resultado_Media);
+    printf("la mediana es de %.4lf\n",resultado_Mediana);
+    printf("la moda es %lli\n",resultado_Moda);
     //liberando los recursos
+    free(consulta);
     sqlite3_close(db);
     return 0;
 }
 
 
 
-int Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
     //preparando la consulta
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
         fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
-        return 1;
+        return -1;
     }
 
     //lanzando la consulta
-    int *Datos_cosulta = NULL;
-    int numero,indice = 0;
+    long long int *Datos_consulta = NULL;
+    int numero;
+    int indice = 0;
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-        numero = sqlite3_column_int(stmt,0);
-        Datos_cosulta = (int*)realloc(Datos_cosulta,(indice+1) * sizeof(int));
-        Datos_cosulta[indice] = numero;
+        numero = sqlite3_column_int64(stmt,0);
+        Datos_consulta = (long long int*)realloc(Datos_consulta,(indice+1) * sizeof(long long int));
+        Datos_consulta[indice] = numero;
         indice++;
     }
 
     //REALIZANDO LA MEDIANA
-    
+    double resultado;
     //algoritmo para ordenar
+    Quick_Sort(Datos_consulta,0,indice);
+    //verificando si es par o inpar
+    int prueba = (indice+1)/2;
+    float prueba_2 = (indice + 1)/2.0;
+    if ((float)prueba - (float)prueba_2 == 0){
+        //PAR
+        prueba_2+=0.5;
+        long long int numero1 = Datos_consulta[prueba];
+        long long int numero2 = Datos_consulta[(int)prueba_2];
+        resultado = (numero1+numero2)/2.0;
+    }else{
+        //IMPAR
+    
+        resultado = Datos_consulta[prueba];
+    }
 
-    int resultado;
+    free(Datos_consulta);
     sqlite3_finalize(stmt);
     return resultado;
 }
 
 
 
-int Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+double Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
     //preparando la consulta
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
         fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
-        return 1;
+        return -1;
     }
 
     //lanzando la consulta
-    int *Datos_cosulta = NULL;
+    long long int *Datos_consulta = NULL;
     int numero,indice = 0;
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-        numero = sqlite3_column_int(stmt,0);
-        Datos_cosulta = (int*)realloc(Datos_cosulta,(indice+1) * sizeof(int));
-        Datos_cosulta[indice] = numero;
+        numero = sqlite3_column_int64(stmt,0);
+        Datos_consulta = (long long int*)realloc(Datos_consulta,(indice+1) * sizeof(long long int));
+        Datos_consulta[indice] = numero;
         indice++;
     }
 
     //sacando la media
-    int sumatoria = 0;
+    long long int sumatoria = 0.0;
 
     for(int i = 0; i<indice+1; i++){
-        sumatoria+=Datos_cosulta[i];
+        sumatoria+=Datos_consulta[i];
     }
 
-    int resultado = sumatoria/indice+1;
+    double resultado = sumatoria/(indice+1+0.0);
 
+    sqlite3_finalize(stmt);
+    free(Datos_consulta);
     return resultado;
 }
 
 
 
-int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+long long int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
     //preparando la consulta
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
         fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
-        return 1;
+        return -1;
     }
 
     //lanzando la consulta
-    int *Datos_cosulta = NULL;
-    int numero,indice = 0;
+    long long int *Datos_consulta = NULL;
+    int indice = 0;
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-        numero = sqlite3_column_int(stmt,0);
-        Datos_cosulta = (int*)realloc(Datos_cosulta,(indice+1) * sizeof(int));
-        Datos_cosulta[indice] = numero;
+        long long numero;
+        numero = sqlite3_column_int64(stmt,0);
+        Datos_consulta = (long long int*)realloc(Datos_consulta,(indice+1) * sizeof(long long int));
+        Datos_consulta[indice] = numero;
         indice++;
     }
 
     //Sacando la moda
+    Aparicion_num *apariciones_numeros = malloc(1*sizeof(Aparicion_num));
+    int cantidad_array = 1;
+    int indice_apariciones = 0;
+    apariciones_numeros[indice_apariciones].apariciones= 1;
+    apariciones_numeros[indice_apariciones].numero = Datos_consulta[0];
 
+    Quick_Sort(Datos_consulta,0,indice);
+    //rellanando el array de struct
+    for (int i = 1; i<indice+1;i++){
+        if(apariciones_numeros[indice_apariciones].numero == Datos_consulta[i]){
+            apariciones_numeros[indice_apariciones].apariciones += 1;
+        }else{
+            cantidad_array++;
+            indice_apariciones++;
+            apariciones_numeros = realloc(apariciones_numeros,cantidad_array*sizeof(Aparicion_num));
+            //colocando los nuevos datos
+            apariciones_numeros[indice_apariciones].numero = Datos_consulta[i];
+            apariciones_numeros[indice_apariciones].apariciones = 1;
+        }
+    }
 
-    int resultado;
+    free(Datos_consulta);
+
+    long long int resultado = apariciones_numeros[0].numero;
+    int mayor_aparicion = apariciones_numeros[0].apariciones;
+    //Obteniendo el numero con mayor aparicion
+    for (int i = 1; i<cantidad_array;i++){
+        if(mayor_aparicion < apariciones_numeros[i].apariciones){
+            resultado = apariciones_numeros[i].numero;
+            mayor_aparicion = apariciones_numeros[i].apariciones;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    free(apariciones_numeros);
     return resultado;
+}
+
+
+void Quick_Sort(long long int*numeros,int inicio, int final){
+
+    if(final<=inicio){return;}
+
+    int pivote = Particion(numeros,inicio,final);
+
+    //particion izquierda
+    Quick_Sort(numeros,inicio,pivote-1);
+    //partcion derecha
+    Quick_Sort(numeros,pivote+1,final);
+}
+
+int Particion(long long int*numeros,int inicio, int final){
+    long long int pivote = numeros[final];
+    int i = inicio-1;
+
+    for(int j = inicio; j<=final; j++){
+        if(numeros[j]<pivote){
+            int temp;
+            i++;
+            temp = numeros[i];
+            numeros[i] = numeros[j];
+            numeros[j] = temp;
+        }
+    }
+    int temp;
+    i++;
+    temp = numeros[i];
+    numeros[i] = numeros[final];
+    numeros[final] = temp;
+    //retorna la posicion final del pivote
+    return i;
 }
