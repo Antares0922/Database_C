@@ -2,11 +2,11 @@ import pandas as pd
 import sqlite3
 
 #SQL
-db = sqlite3.connect("Database.db")
+db = sqlite3.connect("../Database.db")
 cursor = db.cursor()
 
 #Dataframe y CSV
-df = pd.read_csv("Datos_crudos/House_Rent_Dataset.csv")
+df = pd.read_csv("../Datos_crudos/House_Rent_Dataset.csv")
 
 #creando la tabla "Houses"
 cursor.execute("""CREATE TABLE IF NOT EXISTS Houses(

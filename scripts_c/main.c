@@ -88,6 +88,7 @@ double Mediana(sqlite3 *db,char *consulta){
         Datos_consulta[indice] = numero;
         indice++;
     }
+    indice--;
 
     //REALIZANDO LA MEDIANA
     double resultado;
@@ -95,20 +96,15 @@ double Mediana(sqlite3 *db,char *consulta){
     //algoritmo para ordenar
     Quick_Sort(Datos_consulta,0,indice);
 
-    //verificando si es par o inpar
-    int prueba = (indice+1)/2;
-    float prueba_2 = (indice + 1)/2.0;
-
-    if ((float)prueba - (float)prueba_2 == 0.0){
+    if ((indice+1) % 2 == 0){
         //PAR
-        prueba_2+=0.5;
-        long long int numero1 = Datos_consulta[prueba];
-        long long int numero2 = Datos_consulta[(int)prueba_2];
+        long long int numero1 = Datos_consulta[(int)(indice/2)];
+        long long int numero2 = Datos_consulta[(int)(indice/2)+1];
         resultado = (numero1+numero2)/2.0;
     }else{
         //IMPAR
 
-        resultado = Datos_consulta[prueba];
+        resultado = Datos_consulta[(int)(indice/2)];
     }
 
     free(Datos_consulta);
@@ -137,6 +133,7 @@ double Media(sqlite3 *db,char *consulta){
         Datos_consulta[indice] = numero;
         indice++;
     }
+    indice--;
 
     //sacando la media
     long long int sumatoria = 0.0;
@@ -145,7 +142,7 @@ double Media(sqlite3 *db,char *consulta){
         sumatoria+=Datos_consulta[i];
     }
 
-    double resultado = sumatoria/(indice+1+0.0);
+    double resultado = sumatoria/((double)indice+1);
 
     sqlite3_finalize(stmt);
     free(Datos_consulta);
@@ -174,6 +171,7 @@ long long int Moda(sqlite3 *db,char *consulta){
         Datos_consulta[indice] = numero;
         indice++;
     }
+    indice--;
 
     //Sacando la moda
     Aparicion_num *apariciones_numeros = malloc(1*sizeof(Aparicion_num));
