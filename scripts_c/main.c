@@ -7,6 +7,9 @@ char c;
 #define BUFFER_CLEANER(c)\
     while((c = getchar()) != '\n' && c != EOF)
 
+#define ERROR_FUNTION(resultado,funcion)\
+    if((resultado = funcion) == -1){fprintf(stderr,"ERROR CON LA FUNCION\n");return 0;}
+
 #define BUFFER_MAX 60
 
 typedef struct{
@@ -14,9 +17,9 @@ typedef struct{
     int apariciones;
 } Aparicion_num;
 
-double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
-double Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
-long long int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta);
+double Mediana(sqlite3 *db,char *consulta);
+double Media(sqlite3 *db,char *consulta);
+long long int Moda(sqlite3 *db,char *consulta);
 
 void Quick_Sort(long long int*numeros,int inicio,int final);
 int Particion(long long int*numeros,int inicio,int final);
@@ -28,13 +31,12 @@ int main(){
     const char *ruta = "../DATA/Database.db";
 
     if(sqlite3_open(ruta,&db) != SQLITE_OK){
-            fprintf(stderr,"ERROR AL ABRIR LA DB :%s",sqlite3_errmsg(db));
+            fprintf(stderr,"ERROR AL ABRIR LA DB :%s\n",sqlite3_errmsg(db));
     }else{
         printf("se conecto exitosamente a la DB\n");
     }
     
     //obteniendo la consulta
-    sqlite3_stmt *stmt;
     char *consulta = calloc(BUFFER_MAX,sizeof(char));
     //obteniendo el nombre de la columna
     printf("ESCRIBE LA CONSULTA COMPLETA:");
@@ -50,15 +52,10 @@ int main(){
     double resultado_Media;
     double resultado_Mediana;
     long long int resultado_Moda;
-    if ((resultado_Media = Media(db,stmt,consulta)) == -1){
-        return 0;
-    }
-    if((resultado_Mediana = Mediana(db,stmt,consulta)) == -1){
-        return 0;
-    }
-    if((resultado_Moda = Moda(db,stmt,consulta)) == -1){
-        return 0;
-    }
+    
+    ERROR_FUNTION(resultado_Media,Media(db,consulta));
+    ERROR_FUNTION(resultado_Mediana,Mediana(db,consulta));
+    ERROR_FUNTION(resultado_Moda,Moda(db,consulta));
 
     printf("La media es de %.4lf\n",resultado_Media);
     printf("la mediana es de %.4lf\n",resultado_Mediana);
@@ -71,10 +68,12 @@ int main(){
 
 
 
-double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+double Mediana(sqlite3 *db,char *consulta){
     //preparando la consulta
+    sqlite3_stmt *stmt;
+
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
-        fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
+        fprintf(stderr,"hubo un error al preparar la consulta :%s\n",sqlite3_errmsg(db));
         return -1;
     }
 
@@ -92,12 +91,15 @@ double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
 
     //REALIZANDO LA MEDIANA
     double resultado;
+
     //algoritmo para ordenar
     Quick_Sort(Datos_consulta,0,indice);
+
     //verificando si es par o inpar
     int prueba = (indice+1)/2;
     float prueba_2 = (indice + 1)/2.0;
-    if ((float)prueba - (float)prueba_2 == 0){
+
+    if ((float)prueba - (float)prueba_2 == 0.0){
         //PAR
         prueba_2+=0.5;
         long long int numero1 = Datos_consulta[prueba];
@@ -105,7 +107,7 @@ double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
         resultado = (numero1+numero2)/2.0;
     }else{
         //IMPAR
-    
+
         resultado = Datos_consulta[prueba];
     }
 
@@ -116,10 +118,12 @@ double Mediana(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
 
 
 
-double Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+double Media(sqlite3 *db,char *consulta){
     //preparando la consulta
+    sqlite3_stmt *stmt;
+
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
-        fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
+        fprintf(stderr,"hubo un error al preparar la consulta :%s\n",sqlite3_errmsg(db));
         return -1;
     }
 
@@ -150,10 +154,12 @@ double Media(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
 
 
 
-long long int Moda(sqlite3 *db,sqlite3_stmt *stmt,char *consulta){
+long long int Moda(sqlite3 *db,char *consulta){
     //preparando la consulta
+    sqlite3_stmt *stmt;
+
     if(sqlite3_prepare_v2(db,consulta,-1,&stmt,NULL) != SQLITE_OK){
-        fprintf(stderr,"hubo un error al preparar la consulta :%s",sqlite3_errmsg(db));
+        fprintf(stderr,"hubo un error al preparar la consulta :%s\n",sqlite3_errmsg(db));
         return -1;
     }
 
